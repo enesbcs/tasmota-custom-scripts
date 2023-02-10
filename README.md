@@ -3,7 +3,7 @@ Scripts and Berry scripts for Tasmota
 
 ## How to automatically startup a Berry script in Tasmota?
 First Upload .be file with "Manage File System" in consoles
-Then if Rules enabled, enter this commans to console to autostart teams_webhook.be:
+Then if Rules enabled, enter this commands to console to autostart teams_webhook.be:
 ```
 Rule1 ON System#Boot DO br load('teams_webhook.be') ENDON
 Rule1 1
