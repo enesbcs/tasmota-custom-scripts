@@ -34,6 +34,7 @@ var MASTER_DISABLED    = 0
 var HEATING_ACTIVE     = false
 var _heat_time_started = 0
 var _heat_time_stopped = 0
+var _display_state = 0
 
 lv.start()
 scr = lv.scr_act()
@@ -81,6 +82,7 @@ end
 def display_init()
  scr.set_style_bg_color(bgcolor, lv.PART_MAIN | lv.STATE_DEFAULT)
  arc.set_end_angle(200)
+ arc.set_style_arc_color(lv.color_hex(0x00FF00), lv.PART_INDICATOR | lv.STATE_DEFAULT)
  arc.set_size(100, 100)
  arc.set_range(ROT_MIN,ROT_MAX)
  arc.set_value(int(ROT_MIN))
@@ -117,12 +119,17 @@ def set_setpoint(settemp)
 end
 
 def rotary_inp(value, trigger)
+  if _display_state == 0
+    return true
+  end
   try
    var sp = 0
-   if value == 0
+   if number(value) == 0
       sp = SETPOINT - ROT_STEP
-   else
+   elif number(value) == 1
       sp = SETPOINT + ROT_STEP
+   else
+      return true
    end
    if sp<ROT_MIN
       sp=ROT_MIN
@@ -169,9 +176,11 @@ end
 def heatdisplay(onoff)
  if onoff
   theating.set_style_text_color(lv.color_hex(0xff0000), lv.PART_MAIN | lv.STATE_DEFAULT)
+  arc.set_style_arc_color(lv.color_hex(0xFF0000), lv.PART_INDICATOR | lv.STATE_DEFAULT)
   _heat_time_started = tasmota.millis()
  else
   theating.set_style_text_color(bgcolor, lv.PART_MAIN | lv.STATE_DEFAULT)
+  arc.set_style_arc_color(lv.color_hex(0x00FF00), lv.PART_INDICATOR | lv.STATE_DEFAULT)
   _heat_time_started = 0
   if tasmota.time_reached(HEAT_COOLDOWN_TIME)
      _heat_time_stopped = tasmota.millis()
@@ -192,6 +201,15 @@ def motion_change(value, trigger)
        end       
     else
        _motion_lasttime = tasmota.millis()
+    end
+end
+
+def disp_change(value, trigger)
+    if value
+     _motion_lasttime = tasmota.millis()
+     _display_state = 1
+    else
+     _display_state = 0
     end
 end
 
@@ -343,11 +361,14 @@ swstr = swstr + string.format('SwitchMode%d 1;',RELAY_DISPLAY)
 tasmota.cmd(swstr)
 display_init()
 tasmota.set_power(RELAY_DISPLAY-1,true)
+_display_state = 1
 set_setpoint(SETPOINT)
 tasmota.add_rule(string.format('Switch%d#State',RELAY_HEATING),heat_change)
 tasmota.add_rule(string.format('Power%d#State',RELAY_HEATING),heat_change)
 tasmota.add_rule(string.format('Switch%d#State',SW_MOTION),motion_change)
 tasmota.add_rule(string.format('Power%d#State',SW_MOTION),motion_change)
+tasmota.add_rule(string.format('Switch%d#State',RELAY_DISPLAY),disp_change)
+tasmota.add_rule(string.format('Power%d#State',RELAY_DISPLAY),disp_change)
 tasmota.add_rule("Rotary1#Pos1",rotary_inp)
 tasmota.add_cron("*/1 * * * * *", bgproc, "bgproc")
 tasmota.add_cron("1 * * * * *", bgsensors, "bgsensors")
